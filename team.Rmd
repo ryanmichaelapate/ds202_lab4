@@ -1,0 +1,179 @@
+---
+title: "Lab 4"
+author: "Ryan Pate"
+date: "3/17/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Cleaning
+
+1. <span style="color: lightgrey;">Player and opponent names as factors.</span>
+
+    ```{r, include=FALSE}
+    library(readxl)
+    library(dplyr)
+    library(tidyr)
+    library(ggplot2)
+    ```
+    
+    ```{r}
+    defense <- read_excel('/Users/ryanpate/Downloads/cyclonesFootball2020.xlsx', sheet='Defensive')
+    offensive <- read_excel('/Users/ryanpate/Downloads/cyclonesFootball2020.xlsx', sheet='Offensive')
+    biography <- read_excel('/Users/ryanpate/Downloads/cyclonesFootball2020.xlsx', sheet='Biography')
+    
+    defense$Opponent_Opponent <- as.factor(defense$Opponent_Opponent)
+    defense$Name <- as.factor(defense$Name)
+    biography$Name <- as.factor(biography$Name)
+    offensive$Name <- as.factor(offensive$Name)
+    offensive$Opponent_Opponent <- as.factor(offensive$Opponent_Opponent)
+    
+    ```
+    
+2. <span style="color: lightgrey;">Stats as numeric. `Weight` as numeric.</span>
+
+    ```{r}
+    defense$Tackles_Solo <- as.numeric(defense$Tackles_Solo)
+    defense$Tackles_ASST <- as.numeric(defense$Tackles_ASST)
+    defense$Tackles_TFL <- as.numeric(defense$Tackles_TFL)
+    defense$Tackles_Sack <- as.numeric(defense$Tackles_Sack)
+    defense$Turnover_FF <- as.numeric(defense$Turnover_FF)
+    defense$Turnover_FR <- as.numeric(defense$Turnover_FR)
+    defense$Turnover_INT <- as.numeric(defense$Turnover_INT)
+    defense$Pass_QBH <- as.numeric(defense$Pass_QBH)
+    defense$Pass_PB <- as.numeric(defense$Pass_PB)
+    
+    defClean <- defense
+    
+    names(offensive)[names(offensive) == "Passing_CMP-ATT"] <- "Passing_CMP"
+
+    offensive$Receiving_REC <- as.numeric(offensive$Receiving_REC)
+    offensive$Receiving_YDS <- as.numeric(offensive$Receiving_YDS)
+    offensive$Receiving_TD <- as.numeric(offensive$Receiving_TD)
+    offensive$Rushing_ATT <- as.numeric(offensive$Rushing_ATT)
+    offensive$Rushing_YDS <- as.numeric(offensive$Rushing_YDS)
+    offensive$Rushing_TD <- as.numeric(offensive$Rushing_TD)
+    offensive$Passing_CMP <- as.numeric(offensive$Passing_CMP)
+    offensive$Passing_YDS <- as.numeric(offensive$Passing_YDS)
+    offensive$Passing_TD <- as.numeric(offensive$Passing_TD)
+    offensive$Passing_INT <- as.numeric(offensive$Passing_INT)
+    
+    offClean <- offensive
+    
+    biography$Weight <- as.numeric(biography$Weight)
+    ```
+
+3. <span style="color: lightgrey;"> `Height` as numeric. </span>
+
+    ```{r}
+    bioClean <- biography %>%
+    separate(Height, c('feet', 'inches'), sep='-', convert=TRUE, remove=FALSE) %>%
+    mutate(height = 12*feet + inches) %>%
+    select(-Height) %>%
+    select(-feet) %>%
+    select(-inches)
+    ```
+    ***
+    ```{r}
+    str(bioClean)
+    str(defClean)
+    str(offClean)
+    ```
+    ***
+    
+Tidying
+
+1. <span style="color: lightgrey;"> Reformat the `offClean` data frame into a tidy format using `pivot_longer`. The type of statistic (Receiving_REC for the number of receivings, Receiving_YDS for receiving yards, etc) is added as a new key column named `stat`. </span>
+
+    ```{r}
+    offClean <- offClean %>%
+    pivot_longer(c('Receiving_REC', 'Receiving_YDS', 'Receiving_TD', 'Rushing_ATT', 'Rushing_YDS', 'Rushing_TD',        'Passing_CMP', 'Passing_YDS', 'Passing_TD', 'Passing_INT'), 
+               names_to = "stat", values_to = "count")
+    
+    str(offClean)
+    ```
+  
+2. <span style="color: lightgrey;"> Show on the distributions of the offensive statistics. The distribution of each offensive statistic should be shown in a separate facet. Explain the patterns you see. </span>
+
+    Yards are disproportionally the most numerous in every event. 
+    ```{r}
+    ggplot(offClean, aes(x=Opponent_Opponent, y=count)) + geom_point(size=0.5) + facet_wrap(~stat) + 
+      theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  labs(title="Stat Distributation Against Different Opponents", x="Opponent") +
+  theme(plot.title = element_text(size=14, hjust=0.5))
+    
+    ```
+
+3. <span style="color: lightgrey;">Did ISU have better offense against Oregon or Oklahoma? Answer this question by creating a scatterplot with the x- and y-axes being the receiving yards of the ISU players against these two opponents. A large number of receiving yards indicates good offense.</span>
+
+    I was not able to separate the opponent data to graph the performance vs Oregan with the performance vs Oklahoma. My first try was to subset them, but as far as I know you cannot graph two datasets in one plot the way I was trying to. I also tried to use `pivot_wider` but the data would not translate properly.
+
+    ```{r}
+    
+    
+    ```
+    
+4. <span style="color: lightgrey;">Separate the `Hometown` column into two columns, namely, the city and the state where the player comes from. Print the first few rows of these two columns. (Hint: look at the sep= argument of separate)</span>
+
+    ```{r}
+    bioClean <- bioClean %>%
+  separate(Hometown, c('city', 'state'), sep=',', convert=TRUE, remove=FALSE)
+    head(bioClean$city)
+    head(bioClean$state)
+    
+    ```
+    
+5. <span style="color: lightgrey;">How many players are there from each state?</span>
+
+    ```{r}
+    statenum <- count(bioClean, state)
+    statenum
+    
+    ```
+    
+Joining data frames
+
+1. <span style="color: lightgrey;">Find which states do the ISU players (both defensive and offensive) come from. Create an appropriate numerical or graphical summary.</span>
+
+    ```{r}
+    
+    ggplot(statenum, aes(x = state, y = n)) + geom_point() + labs(title="Home States of ISU Football Players", y="Number of Players", x="State") +
+  theme(axis.text.x = element_text(angle=60, hjust=1)) + theme(plot.title = element_text(size=14, hjust=0.5))
+    
+    ```
+    
+2. <span style="color: lightgrey;">How does the performance of quarterback Brock Purdy relate to the performance of the ISU team?</span>
+
+    Purdy consistently has significantly more passing yards than other ISU players.
+    
+3. <span style="color: lightgrey;">Which ISU player(s) made the biggest progress over the last year? Compare the player-level statistics (i.e. averages and totals for each player) using both the 2020 and the 2019 data here. Choose for yourself the player statistics to investigate.</span>
+
+    Chase Allen's receiving yards increased significantly. 
+    ```{r}
+    offense2019 <- read_excel('/Users/ryanpate/Downloads/cyclonesFootball2019.xlsx', sheet='Offensive')
+
+offense2019$Name <- as.factor(offense2019$Name)
+offense2019$Opponent_Opponent <- as.factor(offense2019$Opponent_Opponent)
+
+names(offense2019)[names(offense2019) == "Passing_CMP-ATT"] <- "Passing_CMP"
+
+offense2019$Receiving_REC <- as.numeric(offense2019$Receiving_REC)
+offense2019$Receiving_YDS <- as.numeric(offense2019$Receiving_YDS)
+offense2019$Receiving_TD <- as.numeric(offense2019$Receiving_TD)
+offense2019$Rushing_ATT <- as.numeric(offense2019$Rushing_ATT)
+offense2019$Rushing_YDS <- as.numeric(offense2019$Rushing_YDS)
+offense2019$Rushing_TD <- as.numeric(offense2019$Rushing_TD)
+offense2019$Passing_CMP <- as.numeric(offense2019$Passing_CMP)
+offense2019$Passing_YDS <- as.numeric(offense2019$Passing_YDS)
+offense2019$Passing_TD <- as.numeric(offense2019$Passing_TD)
+offense2019$Passing_INT <- as.numeric(offense2019$Passing_INT)
+
+clean2019 <- offense2019 %>%
+  pivot_longer(c('Receiving_REC', 'Receiving_YDS', 'Receiving_TD', 'Rushing_ATT', 'Rushing_YDS', 'Rushing_TD', 'Passing_CMP', 'Passing_YDS', 'Passing_TD', 'Passing_INT'), 
+               names_to = "stat", values_to = "count")
+    
+    
+    ```
